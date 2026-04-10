@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================== FORM VIEW ==================== -->
+    <record id="view_branch_transfer_request_form" model="ir.ui.view">
+        <field name="name">branch.transfer.request.form</field>
+        <field name="model">branch.transfer.request</field>
+        <field name="arch" type="xml">
+            <form string="Branch Transfer Request">
+                <header>
+                    <button name="action_confirm"
+                            string="Confirm &amp; Send Request"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'draft'"
+                            confirm="This will send a notification to the destination branch. Continue?"/>
+                    <button name="action_approve"
+                            string="Approve"
+                            type="object"
+                            class="btn-success"
+                            invisible="state != 'confirmed' or not is_dest_incharge"/>
+                    <button name="action_create_delivery"
+                            string="Create Delivery"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'approved' or not is_dest_incharge"/>
+                    <button name="action_create_receipt"
+                            string="Create Receipt"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'done' or not is_source_incharge"/>
+                    <button name="action_done"
+                            string="Mark as Done"
+                            type="object"
+                            class="btn-primary"
+                            invisible="1"/>
+                    <button name="action_cancel"
+                            string="Cancel"
+                            type="object"
+                            class="btn-danger"
+                            invisible="state in ('done', 'cancelled') or not is_dest_incharge"/>
+                    <button name="action_reset_draft"
+                            string="Reset to Draft"
+                            type="object"
+                            invisible="state != 'cancelled'"/>
+                    <button name="action_request_return"
+                            string="Report Damaged"
+                            type="object"
+                            class="btn-warning"
+                            invisible="state != 'done' or not is_source_incharge"/>
+
+                    <button name="action_create_return_receipt"
+                            string="Create Return Receipt"
+                            type="object"
+                            class="btn-primary"
+                            invisible="return_state != 'requested' or not is_dest_incharge"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,confirmed,approved,done"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <!-- Source Branch -->
+                        <group string="Source Warehouse (From)">
+                            <field name="source_branch_id"
+                                   readonly="state != 'draft'"/>
+                            <field name="source_warehouse_id"
+                                   readonly="state != 'draft'"/>
+                            <field name="delivery_id" readonly="1"
+                                   invisible="not delivery_id"/>
+                        </group>
+
+                        <!-- Destination Branch -->
+                        <group string="Destination Warehouse (To)">
+                            <field name="dest_warehouse_id"
+                                   readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Request Info">
+                            <field name="date_request" readonly="state != 'draft'"/>
+                            <field name="requested_by" readonly="1"/>
+                        </group>
+                        <group string="Approval Info">
+                            <field name="approved_by" readonly="1"
+                                   invisible="state not in ('approved', 'done')"/>
+                            <field name="date_approved" readonly="1"
+                                   invisible="state not in ('approved', 'done')"/>
+                            <field name="date_done" readonly="1"
+                                   invisible="state != 'done'"/>
+                        </group>
+                    </group>
+
+                    <!-- Product Lines -->
+                    <notebook>
+                        <page string="Products" name="products">
+                            <field name="line_ids"
+                                   readonly="state not in ('draft',)"
+                                   widget="one2many">
+                                <list editable="bottom">
+                                    <!--                                    <column_invisible>parent.state not in ('approved', 'done')</column_invisible>-->
+                                    <field name="product_id" required="1"/>
+                                    <field name="product_uom_id"/>
+                                    <field name="qty_requested" required="1"/>
+                                    <field name="qty_approved"
+                                           optional="show"
+                                           column_invisible="parent.state not in ('approved', 'done')"/>
+                                    <field name="notes"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notes" name="notes_page">
+                            <field name="notes"
+                                   placeholder="Add any special instructions or notes..."
+                                   readonly="state not in ('draft',)"/>
+                        </page>
+                        <page string="Return Notes" name="notes_page">
+                            <field name="notes"
+                                   placeholder="Add any special instructions or notes..."
+                                   readonly="state not in ('draft',)"/>
+                            <field name="return_reason"
+                                   placeholder="Enter reason for return/damage..."
+                                   readonly="return_state != 'none'"/>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <!-- Chatter -->
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ==================== TREE/LIST VIEW ==================== -->
+    <record id="view_branch_transfer_request_tree" model="ir.ui.view">
+        <field name="name">branch.transfer.request.tree</field>
+        <field name="model">branch.transfer.request</field>
+        <field name="arch" type="xml">
+            <list string="Branch Transfer Requests" decoration-info="state == 'draft'"
+                  decoration-warning="state == 'confirmed'"
+                  decoration-success="state in ('approved', 'done')"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="date_request"/>
+                <field name="source_branch_id"/>
+                <field name="source_warehouse_id"/>
+                <field name="dest_warehouse_id"/>
+                <field name="requested_by"/>
+                <field name="line_count" string="# Products"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-warning="state == 'confirmed'"
+                       decoration-success="state in ('approved', 'done')"
+                       decoration-danger="state == 'cancelled'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ==================== SEARCH VIEW ==================== -->
+    <record id="view_branch_transfer_request_search" model="ir.ui.view">
+        <field name="name">branch.transfer.request.search</field>
+        <field name="model">branch.transfer.request</field>
+        <field name="arch" type="xml">
+            <search string="Search Transfer Requests">
+                <field name="name" string="Reference"/>
+                <field name="source_branch_id" string="Source Branch"/>
+                <field name="requested_by"/>
+                <filter name="filter_draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="filter_confirmed" string="Confirmed" domain="[('state','=','confirmed')]"/>
+                <filter name="filter_approved" string="Approved" domain="[('state','=','approved')]"/>
+                <filter name="filter_done" string="Done" domain="[('state','=','done')]"/>
+                <filter name="filter_cancelled" string="Cancelled" domain="[('state','=','cancelled')]"/>
+
+                <separator/>
+                <filter name="filter_my_requests" string="My Requests"
+                        domain="[('requested_by','=',uid)]"/>
+                <!--                <filter name="filter_incoming" string="Incoming to My Branch"-->
+                <!--                        domain="[('dest_branch_id','=',allowed_company_ids and allowed_company_ids[0] or 0)]"/>-->
+
+                <group expand="0" string="Group By">
+                    <filter name="group_source" string="Source Branch"
+                            context="{'group_by': 'source_branch_id'}"/>
+                    <!--                    <filter name="group_dest" string="Destination Branch"-->
+                    <!--                            context="{'group_by': 'dest_branch_id'}"/>-->
+                    <filter name="group_state" string="Status"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_date" string="Request Date"
+                            context="{'group_by': 'date_request:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ==================== ACTION ==================== -->
+    <record id="action_branch_transfer_request" model="ir.actions.act_window">
+        <field name="name">Transfer Requests</field>
+        <field name="res_model">branch.transfer.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_branch_transfer_request_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Branch Transfer Request!
+            </p>
+            <p>
+                Send product transfer requests to other branches.
+                The destination branch will be notified automatically.
+            </p>
+        </field>
+    </record>
+
+</odoo>
